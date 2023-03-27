@@ -1,5 +1,7 @@
 import requests
 import random
+import unittest
+from unittest.mock import patch, MagicMock
 
 class Art:
     def __init__(self, name, category, description, artist):
@@ -65,6 +67,61 @@ class CulturalDestination:
             print(f"Error fetching images for {artist_name}. Status code: {response.status_code}")
 
 
+
+class TestCulturalDestination(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.my_cultural_destination = CulturalDestination("Heritage Arts", "Delhi")
+
+    def test_add_art(self):
+        self.my_cultural_destination.add_art("Taj Mahal", "Architecture", "The iconic symbol of love in Agra", "Ustad Ahmad Lahauri")
+        self.my_cultural_destination.add_art("Bharatanatyam Dance", "Performing Arts", "Classical Indian dance form", "Rukmini Devi Arundale")
+        self.my_cultural_destination.add_art("Pattachitra Painting", "Visual Arts", "Traditional cloth-based scroll painting from Odisha", "Raghurajpur Artists")
+        self.assertEqual(len(self.my_cultural_destination.art_list), 3)
+        self.assertEqual(self.my_cultural_destination.art_list[0].name, "Taj Mahal")
+
+    def test_remove_art(self):
+        self.my_cultural_destination.remove_art("Taj Mahal")
+        self.assertEqual(len(self.my_cultural_destination.art_list), 2)
+        self.assertEqual(self.my_cultural_destination.art_list[0].name, "Bharatanatyam Dance")
+
+    def test_get_random_art(self):
+        with patch('random.choice') as mock_random:
+            mock_random.return_value = Art("Pattachitra Painting", "Visual Arts", "Traditional cloth-based scroll painting from Odisha", "Raghurajpur Artists")
+            self.my_cultural_destination.get_random_art()
+            mock_random.assert_called_once_with(self.my_cultural_destination.art_list)
+
+    def test_get_artist_info(self):
+        with patch('requests.get') as mock_get:
+            mock_json = MagicMock()
+            mock_json.return_value = {
+                "items": [
+                    {
+                        "link": "https://example.com/image.jpg"
+                    }
+                ]
+            }
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json = mock_json
+            mock_get.return_value = mock_response
+            self.my_cultural_destination.get_artist_info("Ustad Ahmad Lahauri")
+            mock_get.assert_called_once_with(
+                "https://www.googleapis.com/customsearch/v1",
+                params={
+                    "q": "Ustad Ahmad Lahauri",
+                    "cx": "YOUR_SEARCH_ENGINE_ID",
+                    "key": "YOUR_API_KEY",
+                    "searchType": "image",
+                    "imgSize": "large",
+                    "num": 1,
+                }
+            )
+            self.assertEqual(mock_json.call_count, 1)
+            self.assertEqual(mock_response.json.call_count, 1)
+            self.assertEqual(mock_response.status_code, 200)
+            self.assertEqual(mock_response.json()["items"][0]["link"], "https://example.com/image.jpg")
+
 if __name__ == "__main__":
     # Creating a new Cultural Destination
     my_cultural_destination = CulturalDestination("Heritage Arts", "Delhi")
@@ -73,4 +130,7 @@ if __name__ == "__main__":
     my_cultural_destination.add_art("Taj Mahal", "Architecture", "The iconic symbol of love in Agra", "Ustad Ahmad Lahauri")
     my_cultural_destination.add_art("Bharatanatyam Dance", "Performing Arts", "Classical Indian dance form", "Rukmini Devi Arundale")
     my_cultural_destination.add_art("Pattachitra Painting", "Visual Arts", "Traditional cloth-based scroll painting from Odisha", "Raghurajpur Artists")
+
+    unittest.main()
+
 
